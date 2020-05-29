@@ -1,12 +1,17 @@
 CFLAGS = -std=c11 -g -static
 
-9cc: 9cc.c
+SRCS=$(wildcard *.c)
+OBJS=$(SRC:.c=.o)
+INCLUDES=main.h
 
-test: 9cc
+main: $(OBJS)
+
+$(OBJS): $(INCLUDES)
+
+test: main
 	./test.sh
 
 clean:
-	rm -f 9cc *.o *~ tmp*
+	rm -f main *.o *~ tmp*
 
 .PHONY: test clean
-
