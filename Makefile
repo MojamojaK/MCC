@@ -1,8 +1,8 @@
 CFLAGS = -std=c11 -g -static
 
 SRCS=$(wildcard *.c)
-OBJS=$(SRC:.c=.o)
-INCLUDES=main.h
+OBJS=$(SRCS:.c=.o)
+INCLUDES=$(wildcard *.h)
 
 main: $(OBJS)
 
