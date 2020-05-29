@@ -70,8 +70,9 @@ bool at_eof() {
 	return token->kind == TK_EOF;
 }
 
+// Make sure to put lengthy strings in first
 char* reserved_characters[] = {
-    "+", "-", "*", "/", "%", "(", ")"
+    "<=", ">=", "==", "!=", ">", "<", "+", "-", "*", "/", "%", "(", ")"
 };
 
 int reserved(char* c) {
@@ -133,6 +134,10 @@ typedef enum {
     ND_DIV,
     ND_MOD,
     ND_NUM,
+    ND_EQ,
+    ND_NEQ,
+    ND_LT,
+    ND_LEQ,
 } NodeKind;
 
 typedef struct Node Node;
@@ -160,12 +165,50 @@ Node *new_node_num(const int val) {
 }
 
 Node *expr();
+Node *equality();
+Node *relational();
+Node *add();
 Node *mul();
 Node *unary();
 Node *primary();
 
 Node *expr() {
     // fprintf(stderr, "expr\n");
+    return equality();
+}
+
+Node *equality() {
+    // fprintf(stderr, "equality\n");
+    Node *node = relational();
+    for (;;) {
+        if (consume("==")) {
+            node = new_node(ND_EQ, node, relational());
+        } else if (consume("!=")) {
+            node = new_node(ND_NEQ, node, relational());
+        } else {
+            return node;
+        }    
+    }
+}
+
+Node *relational() {
+    Node *node = add();
+    for (;;) {
+        if (consume("<=")) {
+            node = new_node(ND_LEQ, node, add());
+        } else if (consume(">=")) {
+            node = new_node(ND_LEQ, add(), node);
+        } else if (consume("<")) {
+            node = new_node(ND_LT, node, add());
+        } else if (consume(">")) {
+            node = new_node(ND_LT, add(), node);
+        } else {
+            return node;
+        }
+    }
+}
+
+Node *add() {
     Node *node = mul();
     for (;;) {
         if (consume("+")) {
@@ -243,6 +286,27 @@ void gen(Node *node) {
             printf("\tcqo\n");
             printf("\tidiv\trdi\n");
             printf("\tmov\trax,\trdx\n");
+            break;
+        case ND_EQ:
+            printf("\tcmp\trax,\trdi\n");
+            printf("\tsete\tal\n");
+            printf("\tmovzb\trax,\tal\n");
+            break;
+        case ND_NEQ:
+            printf("\tcmp\trax,\trdi\n");
+            printf("\tsetne\tal\n");
+            printf("\tmovzb\trax,\tal\n");
+            break;
+        case ND_LEQ:
+            printf("\tcmp\trax,\trdi\n");
+            printf("\tsetle\tal\n");
+            printf("\tmovzb\trax,\tal\n");
+            break;
+        case ND_LT:
+            printf("\tcmp\trax,\trdi\n");
+            printf("\tsetl\tal\n");
+            printf("\tmovzb\trax,\tal\n");
+            break;
     }
 
     printf ("\tpush\trax\n");
