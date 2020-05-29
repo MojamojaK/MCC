@@ -71,7 +71,7 @@ bool at_eof() {
 }
 
 char* reserved_characters[] = {
-    "+", "-", "*", "/", "(", ")"
+    "+", "-", "*", "/", "%", "(", ")"
 };
 
 int reserved(char* c) {
@@ -131,6 +131,7 @@ typedef enum {
     ND_SUB,
     ND_MUL,
     ND_DIV,
+    ND_MOD,
     ND_NUM,
 } NodeKind;
 
@@ -185,6 +186,8 @@ Node *mul() {
             node = new_node(ND_MUL, node, unary());
         } else if (consume("/")) {
             node = new_node(ND_DIV, node, unary());
+        } else if (consume("%")) {
+            node = new_node(ND_MOD, node, unary());
         } else {
             return node;
         }
@@ -236,6 +239,10 @@ void gen(Node *node) {
             printf("\tcqo\n");
             printf("\tidiv\trdi\n");
             break;
+        case ND_MOD:
+            printf("\tcqo\n");
+            printf("\tidiv\trdi\n");
+            printf("\tmov\trax,\trdx\n");
     }
 
     printf ("\tpush\trax\n");
