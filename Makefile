@@ -1,17 +1,30 @@
-CFLAGS = -std=c11 -g -static
+SOURCEDIR = src
+INCLUDEDIR = includes
+BUILDDIR = build
 
-SRCS=$(wildcard *.c)
-OBJS=$(SRCS:.c=.o)
-INCLUDES=$(wildcard *.h)
+CC = cc
+CFLAGS = -std=c11 -g -static -I$(INCLUDEDIR)
 
-main: $(OBJS)
+BIN=main
+SRCS=$(wildcard $(SOURCEDIR)/*.c)
+OBJS=$(patsubst $(SOURCEDIR)/%.c, $(BUILDDIR)/%.o, $(SRCS))
+INCLUDES=$(wildcard $(INCLUDEDIR)/*.h)
 
-$(OBJS): $(INCLUDES)
+all: dir $(BUILDDIR)/$(BIN)
 
-test: main
-	./test.sh
+dir:
+	@mkdir -p $(BUILDDIR)
+
+$(BUILDDIR)/$(BIN): $(OBJS)
+	$(CC) $^ -o $@
+
+$(OBJS): $(BUILDDIR)/%.o : $(SOURCEDIR)/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+test: $(BUILDDIR)/$(BIN)
+	./test.sh $(CC) $<
 
 clean:
-	rm -f main *.o *~ tmp*
+	rm -rf build
 
-.PHONY: test clean
+.PHONY: test clean dir

@@ -1,10 +1,13 @@
 #!/bin/bash
+cc="$1"
+bin="$2"
+
 assert(){
     expected="$1"
     input="$2"
 
-    ./main "$input" > tmp.s
-    gcc -o tmp tmp.s
+    "$bin" "$input" > tmp.s
+    "$cc" -o tmp tmp.s
     ./tmp
     actual="$?"
     rm tmp tmp.s
