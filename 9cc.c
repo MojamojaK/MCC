@@ -14,11 +14,11 @@ typedef enum {
 typedef struct Token Token;
 
 struct Token {
-
 	TokenKind kind;
 	Token *next;
 	int val;
 	char *str;
+    int len;
 };
 
 Token *token;
@@ -38,16 +38,20 @@ void error_at(char *loc, char *fmt, ...) {
 	exit(1);
 }
 
-bool consume(char op) {
-	if (token->kind != TK_RESERVED || token->str[0] != op) {
+bool token_reserved(char* op) {
+    return token->kind != TK_RESERVED || strlen(op) != token->len || memcmp((void*)token->str, (void*)op, token->len);
+}
+
+bool consume(char* op) {
+	if (token_reserved(op)) {
 		return false;
 	}
 	token = token->next;
 	return true;
 }
 
-void expect(char op) {
-	if (token-> kind != TK_RESERVED || token->str[0] != op) {
+void expect(char* op) {
+	if (token_reserved(op)) {
 		error_at(token->str, "Not '%c'", op);
 	}
 	token = token->next;
@@ -66,18 +70,20 @@ bool at_eof() {
 	return token->kind == TK_EOF;
 }
 
-static const char reserved_characters[] = {
-    '+', '-', '*', '/', '(', ')'
+char* reserved_characters[] = {
+    "+", "-", "*", "/", "(", ")"
 };
 
-bool is_reserved(const char c) {
-    const int n = sizeof(reserved_characters) / sizeof(char);
+int reserved(char* c) {
+    int n = sizeof(reserved_characters) / sizeof(char*);
     for (int i = 0; i < n; i++) {
-        if (c == reserved_characters[i]) {
-            return true;
+        char* target = reserved_characters[i];
+        int len = strlen(target);
+        if (strncmp(c, target, len) == 0) {
+            return len;
         }
     }
-    return false;
+    return 0;
 }
 
 Token *new_token(const TokenKind kind, Token *cur, char *str) {
@@ -99,8 +105,11 @@ Token *tokenize(char *p) {
 			continue;
 		}
 		
-		if (is_reserved(*p)) {
-			cur = new_token(TK_RESERVED, cur, p++);
+        int len = reserved(p);
+		if (len > 0) {
+			cur = new_token(TK_RESERVED, cur, p);
+            cur->len = len;
+            p += len;
 			continue;
 		}
 
@@ -155,11 +164,12 @@ Node *unary();
 Node *primary();
 
 Node *expr() {
+    // fprintf(stderr, "expr\n");
     Node *node = mul();
     for (;;) {
-        if (consume('+')) {
+        if (consume("+")) {
             node = new_node(ND_ADD, node, mul());
-        } else if (consume('-')) {
+        } else if (consume("-")) {
             node = new_node(ND_SUB, node, mul());
         } else {
             return node;
@@ -168,11 +178,12 @@ Node *expr() {
 }
 
 Node *mul() {
+    // fprintf(stderr, "mul\n");
     Node *node = unary();
     for (;;) {
-        if (consume('*')) {
+        if (consume("*")) {
             node = new_node(ND_MUL, node, unary());
-        } else if (consume('/')) {
+        } else if (consume("/")) {
             node = new_node(ND_DIV, node, unary());
         } else {
             return node;
@@ -181,18 +192,20 @@ Node *mul() {
 }
 
 Node *unary() {
-    if (consume('+')) {
+    // fprintf(stderr, "unary\n");
+    if (consume("+")) {
         return primary();
-    } else if (consume('-')) {
+    } else if (consume("-")) {
         return new_node(ND_SUB, new_node_num(0), primary());
     }
     return primary();
 }
 
 Node *primary() {
-    if (consume('(')) {
+    // fprintf(stderr, "primary\n");
+    if (consume("(")) {
         Node *node = expr();
-        expect(')');
+        expect(")");
         return node;
     }
     return new_node_num(expect_number());
