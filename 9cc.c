@@ -23,9 +23,16 @@ struct Token {
 
 Token *token;
 
-void error(char *fmt, ...) {
+char* user_input;
+
+void error_at(char *loc, char *fmt, ...) {
 	va_list ap;
 	va_start(ap, fmt);
+
+	int pos = loc - user_input;
+	fprintf(stderr, "%s\n", user_input);
+	fprintf(stderr, "%*s", pos, "");
+	fprintf(stderr, "^ ");
 	vfprintf(stderr, fmt, ap);
 	fprintf(stderr, "\n");
 	exit(1);
@@ -41,14 +48,14 @@ bool consume(char op) {
 
 void expect(char op) {
 	if (token-> kind != TK_RESERVED || token->str[0] != op) {
-		error("Not '%c'", op);
+		error_at(token->str, "Not '%c'", op);
 	}
 	token = token->next;
 }
 
 int expect_number() {
 	if (token->kind != TK_NUM) {
-		error("Not a number!");
+		error_at(token->str, "Not a number!");
 	}
 	int val = token->val;
 	token = token->next;
@@ -89,7 +96,7 @@ Token *tokenize(char *p) {
 			continue;
 		}
 
-		error("Unable to Tokenize");
+		error_at(token->str, "Unable to Tokenize");
 	}
 
 	new_token(TK_EOF, cur, p);
@@ -101,6 +108,8 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Insufficient Parameters\n");
 		return 1;
 	}
+
+	user_input = argv[1];
 
 	token = tokenize(argv[1]);
 
