@@ -7,6 +7,7 @@ assert(){
     gcc -o tmp tmp.s
     ./tmp
     actual="$?"
+    rm tmp tmp.s
 
     if [ "$actual" = "$expected" ]; then
         echo "$input => $actual"
