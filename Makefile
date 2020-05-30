@@ -18,7 +18,7 @@ dir:
 $(BUILDDIR)/$(BIN): $(OBJS)
 	$(CC) $^ -o $@
 
-$(OBJS): $(BUILDDIR)/%.o : $(SOURCEDIR)/%.c
+$(OBJS): $(BUILDDIR)/%.o : $(SOURCEDIR)/%.c $(INCLUDES)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 test: $(BUILDDIR)/$(BIN)
