@@ -1,25 +1,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "asmgen.h"
 #include "tokenizer.h"
 #include "codegen.h"
 
+static char buffer[256];
+
 void generate_header() {
-    printf(".intel_syntax noprefix\n");
-    printf(".globl main\n");
+    head_out_1(".intel_syntax noprefix");
+    head_out_1(".globl main");
 }
 
 void generate_stack_header(char* name) {
-    printf("%s:\n", name);
-    printf("\tpush\trbp\n");
-    printf("\tmov\trbp,\trsp\n");
-    printf("\tsub\trsp,\t%d\n", lvar_count() << 3);
+    head_out_1(format(buffer, "%s:", name));
+    out_2("push", "rbp");
+    out_3("mov", "rbp", "rsp");
+    out_3("sub", "rsp", format(buffer, "%d", lvar_count() << 3));
 }
 
 void generate_stack_footer() {
-    printf("\tmov\trsp, rbp\n");
-    printf("\tpop\trbp\n");
-    printf("\tret\n");
+    out_3("mov", "rsp", "rbp");
+    out_2("pop", "rbp");
+    out_1("ret");
 }
 
 static void gen_lval(Node* node) {
@@ -27,82 +30,82 @@ static void gen_lval(Node* node) {
         fprintf(stderr, "LHS not variable\n");
         exit(1);
     }
-    printf("\tmov\trax,\trbp\n");
-    printf("\tsub\trax,\t%d\n", node->offset);
-    printf("\tpush\trax\n");
+    out_3("mov", "rax", "rbp");
+    out_3("sub", "rax", format(buffer, "%d", node->offset));
+    out_2("push", "rax");
 }
 
 static void gen(Node *node) {
     switch (node->kind) {
         case ND_NUM:
-            printf("\tpush\t%d\n", node->val);
+            out_2("push", format(buffer, "%d", node->val));
             return;
         case ND_LVAR: // Local Variable load
             gen_lval(node);
-            printf("\tpop\trax\n");
-            printf("\tmov\trax,\t[rax]\n");
-            printf("\tpush\trax\n");
+            out_2("pop", "rax");
+            out_3("mov", "rax", "[rax]");
+            out_2("push", "rax");
             return;
         case ND_ASSIGN: // Local Variable store
             gen_lval(node->lhs);
             gen(node->rhs);
-            printf("\tpop\trdi\n");
-            printf("\tpop\trax\n");
-            printf("\tmov\t[rax],\trdi\n");
-            printf("\tpush\trdi\n");
+            out_2("pop", "rdi");
+            out_2("pop", "rax");
+            out_3("mov", "[rax]", "rdi");
+            out_2("push", "rdi");
             return;
     }
 
     gen(node->lhs);
     gen(node->rhs);
-    printf("\tpop\trdi\n");
-    printf("\tpop\trax\n");
+    out_2("pop", "rdi");
+    out_2("pop", "rax");
 
     switch (node->kind) {
         case ND_ADD:
-            printf("\tadd\trax,\trdi\n");
+            out_3("add", "rax", "rdi");
             break;
         case ND_SUB:
-            printf("\tsub\trax,\trdi\n");
+            out_3("sub", "rax", "rdi");
             break;
         case ND_MUL:
-            printf("\timul\trax,\trdi\n");
+            out_3("imul", "rax", "rdi");
             break;
         case ND_DIV:
-            printf("\tcqo\n");
-            printf("\tidiv\trdi\n");
+            out_1("cqo");
+            out_2("idiv", "rdi");
             break;
         case ND_MOD:
-            printf("\tcqo\n");
-            printf("\tidiv\trdi\n");
-            printf("\tmov\trax,\trdx\n");
+            out_1("cqo");
+            out_2("idiv", "rdi");
+            out_3("mov", "rax", "rdx");
             break;
         case ND_EQ:
-            printf("\tcmp\trax,\trdi\n");
-            printf("\tsete\tal\n");
-            printf("\tmovzb\trax,\tal\n");
+            out_3("cmp", "rax", "rdi");
+            out_2("sete", "al");
+            out_3("movzb", "rax", "al");
             break;
         case ND_NEQ:
-            printf("\tcmp\trax,\trdi\n");
-            printf("\tsetne\tal\n");
-            printf("\tmovzb\trax,\tal\n");
+            out_3("cmp", "rax", "rdi");
+            out_2("setne", "al");
+            out_3("movzb", "rax", "al");
             break;
         case ND_LEQ:
-            printf("\tcmp\trax,\trdi\n");
-            printf("\tsetle\tal\n");
-            printf("\tmovzb\trax,\tal\n");
+            out_3("cmp", "rax", "rdi");
+            out_2("setle", "al");
+            out_3("movzb", "rax", "al");
             break;
         case ND_LT:
-            printf("\tcmp\trax,\trdi\n");
-            printf("\tsetl\tal\n");
-            printf("\tmovzb\trax,\tal\n");
+            out_3("cmp", "rax", "rdi");
+            out_2("setl", "al");
+            out_3("movzb", "rax", "al");
             break;
     }
 
-    printf ("\tpush\trax\n");
+    out_2("push", "rax");
 }
 
 void generate_stmt(Node* node) {
     gen(node);
-    printf("\tpop\trax\n");
+    out_2("pop", "rax");
 }
