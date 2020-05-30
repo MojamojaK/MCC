@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 #include <string.h>
 #include <ctype.h>
 
@@ -10,7 +9,7 @@ static Token *token;
 
 static char* user_input;
 
-static void error_at(char *loc, char *fmt, ...) {
+void error_at(char *loc, char *fmt, ...) {
 	va_list ap;
 	va_start(ap, fmt);
 
@@ -35,6 +34,19 @@ bool consume(char* op) {
 	return true;
 }
 
+static bool token_not_ident() {
+    return token->kind != TK_IDENT;
+}
+
+Token *consume_ident() {
+    if (token_not_ident()) {
+        return NULL;
+    }
+    Token *ret = token;
+    token = token->next;
+    return ret;
+}
+
 void expect(char* op) {
 	if (token_reserved(op)) {
 		error_at(token->str, "Not '%s'", op);
@@ -57,7 +69,7 @@ bool at_eof() {
 
 // Make sure to put lengthy strings in first
 static char* reserved_characters[] = {
-    "<=", ">=", "==", "!=", ">", "<", "+", "-", "*", "/", "%", "(", ")"
+    "<=", ">=", "==", "!=", ";", "=", ">", "<", "+", "-", "*", "/", "%", "(", ")"
 };
 
 int reserved(char* c) {
@@ -70,6 +82,22 @@ int reserved(char* c) {
         }
     }
     return 0;
+}
+
+int ident(char* c) {
+	if (!isalpha(c[0])) {
+		return 0;
+	}
+	int len = 1;
+	for (;;) {
+		char cl = c[len];
+		if (cl == '_' || isalpha(cl) || isdigit(cl)) {
+			len++;
+		}
+		else {
+			return len;
+		}
+	}
 }
 
 static Token *new_token(const TokenKind kind, Token *cur, char *str) {
@@ -93,11 +121,19 @@ Token *tokenize(char *p) {
 			continue;
 		}
 		
-        int len = reserved(p);
-		if (len > 0) {
+        int reserved_len = reserved(p);
+		if (reserved_len > 0) {
 			cur = new_token(TK_RESERVED, cur, p);
-            cur->len = len;
-            p += len;
+            cur->len = reserved_len;
+            p += reserved_len;
+			continue;
+		}
+
+		int ident_len = ident(p);
+		if (ident_len > 0) {
+			cur = new_token(TK_IDENT, cur, p);
+            cur->len = ident_len;
+            p += ident_len;
 			continue;
 		}
 

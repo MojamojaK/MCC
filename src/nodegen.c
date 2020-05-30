@@ -4,6 +4,9 @@
 #include "tokenizer.h"
 #include "nodegen.h"
 
+int codes = 0;
+Node **code;
+
 Node *new_node(const NodeKind kind, Node *lhs, Node *rhs) {
     Node* node = calloc(1, sizeof(Node));
     node->kind = kind;
@@ -19,8 +22,37 @@ Node *new_node_num(const int val) {
     return node;
 }
 
+Node *new_node_lvar(const char* name, const int len) {
+    Node *node = calloc(1, sizeof(Node));
+    node->kind = ND_LVAR;
+    node->offset = (name[0] - 'a' + 1) << 3;
+    return node;
+}
+
+void program() {
+    while (!at_eof()) {
+        codes += 1;
+        code = (Node**)realloc((void*)code, sizeof(Node*) * codes);
+        code[codes - 1] = stmt();
+    }
+}
+
+Node *stmt() {
+    Node *node = expr();
+    expect(";");
+    return node;
+}
+
 Node *expr() {
-    return equality();
+    return assign();
+}
+
+Node *assign() {
+    Node* node = equality();
+    if (consume("=")) {
+        node = new_node(ND_ASSIGN, node, assign());
+    }
+    return node;
 }
 
 Node *equality() {
@@ -95,6 +127,10 @@ Node *primary() {
         Node *node = expr();
         expect(")");
         return node;
+    }
+    Token *ident = consume_ident();
+    if (ident != NULL) {
+        return new_node_lvar(ident->str, ident->len);
     }
     return new_node_num(expect_number());
 }

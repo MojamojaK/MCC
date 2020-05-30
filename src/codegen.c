@@ -1,22 +1,56 @@
 #include <stdio.h>
+#include <stdlib.h>
 
+#include "tokenizer.h"
 #include "codegen.h"
 
 void generate_header() {
     printf(".intel_syntax noprefix\n");
     printf(".globl main\n");
-    printf("main:\n");
 }
 
-void generate_footer() {
-    printf("\tpop\trax\n");
+void generate_stack_header(char* name) {
+    printf("%s:\n", name);
+    printf("\tpush\trbp\n");
+    printf("\tmov\trbp,\trsp\n");
+    printf("\tsub\trsp,\t208\n");
+}
+
+void generate_stack_footer() {
+    printf("\tmov\trsp, rbp\n");
+    printf("\tpop\trbp\n");
     printf("\tret\n");
 }
 
-void gen(Node *node) {
-    if (node->kind == ND_NUM) {
-        printf("\tpush\t%d\n", node->val);
-        return;
+static void gen_lval(Node* node) {
+    if (node->kind != ND_LVAR) {
+        fprintf(stderr, "LHS not variable\n");
+        exit(1);
+    }
+    printf("\tmov\trax,\trbp\n");
+    printf("\tsub\trax,\t%d\n", node->offset);
+    printf("\tpush\trax\n");
+}
+
+static void gen(Node *node) {
+    switch (node->kind) {
+        case ND_NUM:
+            printf("\tpush\t%d\n", node->val);
+            return;
+        case ND_LVAR: // Local Variable load
+            gen_lval(node);
+            printf("\tpop\trax\n");
+            printf("\tmov\trax,\t[rax]\n");
+            printf("\tpush\trax\n");
+            return;
+        case ND_ASSIGN: // Local Variable store
+            gen_lval(node->lhs);
+            gen(node->rhs);
+            printf("\tpop\trdi\n");
+            printf("\tpop\trax\n");
+            printf("\tmov\t[rax],\trdi\n");
+            printf("\tpush\trdi\n");
+            return;
     }
 
     gen(node->lhs);
@@ -66,4 +100,9 @@ void gen(Node *node) {
     }
 
     printf ("\tpush\trax\n");
+}
+
+void generate_stmt(Node* node) {
+    gen(node);
+    printf("\tpop\trax\n");
 }

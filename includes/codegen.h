@@ -4,8 +4,10 @@
 #include "nodegen.h"
 
 void generate_header();
-void generate_footer();
 
-void gen(Node *node);
+void generate_stack_header(char* name);
+void generate_stack_footer();
+
+void generate_stmt(Node* node);
 
 #endif

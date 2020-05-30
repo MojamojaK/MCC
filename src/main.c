@@ -11,12 +11,21 @@ int main(int argc, char **argv) {
 	}
 
 	tokenize(argv[1]);
+    // fprintf(stderr, "tokenize\n");
 
-    Node *node = expr();
+    program();
+    // fprintf(stderr, "program\n");
 
     generate_header();
-    gen(node);	
-	generate_footer();
+    generate_stack_header("main");
+
+    for (int i = 0; i < codes; i++) {
+        // fprintf(stderr, "generate_stmt start\n");
+        generate_stmt(code[i]);
+        // fprintf(stderr, "generate_stmt end\n");
+    }
+
+	generate_stack_footer();
     
 	return 0;
 }

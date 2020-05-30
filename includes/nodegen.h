@@ -12,6 +12,8 @@ typedef enum {
     ND_NEQ,
     ND_LT,
     ND_LEQ,
+    ND_ASSIGN,
+    ND_LVAR,
 } NodeKind;
 
 typedef struct Node Node;
@@ -21,17 +23,25 @@ struct Node {
     Node *lhs;
     Node *rhs;
     int val;
+    int offset;
 };
 
 Node *new_node(const NodeKind kind, Node *lhs, Node *rhs);
 Node *new_node_num(const int val);
+Node *new_node_lvar(const char* name, const int len);
 
+void program();
+Node *stmt();
 Node *expr();
+Node *assign();
 Node *equality();
 Node *relational();
 Node *add();
 Node *mul();
 Node *unary();
 Node *primary();
+
+extern int codes;
+extern Node** code;
 
 #endif
