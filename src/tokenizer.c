@@ -37,7 +37,7 @@ bool consume(char* op) {
 
 void expect(char* op) {
 	if (token_reserved(op)) {
-		error_at(token->str, "Not '%c'", op);
+		error_at(token->str, "Not '%s'", op);
 	}
 	token = token->next;
 }
