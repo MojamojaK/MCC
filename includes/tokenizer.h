@@ -18,10 +18,10 @@ typedef struct Token Token;
 struct Token {
 	TokenKind kind;
 	Token *next;
-	OpName op;
-	int val;
+	OpName op;	// For kind == TK_RESERVED
+	int val;	// For kind == TK_NUM
+	int len;	// For kind == TK_IDENT
 	char *str;
-	int len;
 };
 
 typedef struct LVar LVar;
@@ -35,8 +35,6 @@ struct LVar {
 
 LVar *find_or_gen_lvar(Token *token);
 int lvar_count();
-
-void error_at(char *loc, char *fmt, ...);
 
 Token *tokenize(char *p);
 

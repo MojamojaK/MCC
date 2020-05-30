@@ -6,7 +6,7 @@
 #include "error.h"
 #include "tokenizer.h"
 
-static Token *token;
+static Token *token = NULL;
 
 static LVar *locals_head = NULL;
 int lvar_count() {
@@ -120,7 +120,7 @@ Token *tokenize(char *p) {
 	head.next = NULL;
 	Token *cur = &head;
 
-	while (*p) {
+	while(*p) {
 		if (isspace(*p)) {
 			p++;
 			continue;
@@ -150,6 +150,10 @@ Token *tokenize(char *p) {
 		}
 
 		error_at(p, "Unable to Tokenize");
+	};
+
+	if (cur == &head) {
+		error_at(p, "Input Empty");
 	}
 
 	new_token(TK_EOF, cur, p);

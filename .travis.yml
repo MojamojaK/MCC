@@ -8,3 +8,4 @@ before_install:
 - chmod +x test.sh
 script: 
 - make && make test
+warnings_are_errors: true

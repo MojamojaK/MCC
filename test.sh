@@ -18,14 +18,28 @@ assert(){
     actual="$?"
 
     if [ "$actual" = "$expected" ]; then
-        echo "$input => $actual"
+        echo "SUCCESS: $input => $actual"
     else
-        echo "$input => $expected expected, but got $actual"
+        echo "FAILURE: $input => $expected expected, but got $actual"
         cat tmp.s
         rm tmp tmp.s
         exit
     fi
     rm tmp tmp.s
+}
+
+compile_fail_assert(){
+    input="$1"
+    echo ""
+    echo "$bin \"$input\""
+    "$bin" "$input" # 2> /dev/null
+    success="$?"
+    if [ "$success" != "1" ]; then
+        echo "FAILURE: $bin $input expected failure"
+        exit
+    else
+        echo "SUCCESS: Failed Compilation $input"
+    fi
 }
 
 assert 0 "0;"
@@ -70,3 +84,21 @@ assert 12 "IMMULTI_BYTE = 12;IMMULTI_BYTE;"
 assert 23 "IMMULTI_BYTE = 12; b = 11; IMMULTI_BYTE + b;"
 assert 33 "IMMULTI_BYTE = 2; d = 3; v = 5; m = d * 11; (IMMULTI_BYTE + d == v) * m;"
 
+compile_fail_assert ""
+compile_fail_assert "                      "
+compile_fail_assert ";"
+compile_fail_assert "                      ;"
+compile_fail_assert "+"
+compile_fail_assert ")"
+compile_fail_assert "="
+compile_fail_assert "9"
+compile_fail_assert "10 + 1; 4"
+compile_fail_assert "("
+compile_fail_assert "(;"
+compile_fail_assert "(1+( 2 + 4);"
+compile_fail_assert "+ 1 + 3 + ;"
+compile_fail_assert "+ 1 - 2"
+compile_fail_assert "*1+1;"
+compile_fail_assert "_d = 1; d;"
+compile_fail_assert "a = 1 + 2; _c = 2; a + c;"
+compile_fail_assert "a\$#\` = 1; a"
