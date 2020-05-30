@@ -7,9 +7,38 @@
 
 static Token *token;
 
-static char* user_input;
+static LVar *locals_head = NULL;
+int lvar_count() {
+    int count = 0;
+    for (LVar *var = locals_head; var != NULL; var = var->next) {
+        ++count;
+    }
+    return count;
+}
 
+LVar *find_or_gen_lvar(Token *token) {
+    for (LVar *var = locals_head; var != NULL; var = var->next) {
+        if (var->len == token->len && memcmp(token->str, var->name, var->len) == 0) {
+            return var;
+        }
+    }
+    LVar *lvar = calloc(1, sizeof(LVar));
+    lvar->name = token->str;
+    lvar->len = token->len;
+    lvar->next = locals_head;
+    if (locals_head == NULL) 
+    {
+        lvar->offset = 8;
+    } else {
+        lvar->offset = locals_head->offset + 8;
+    }
+    locals_head = lvar;
+    return lvar;
+}
+
+static char* user_input;
 void error_at(char *loc, char *fmt, ...) {
+    // fprintf(stderr, "error_at\n");
 	va_list ap;
 	va_start(ap, fmt);
 
@@ -22,16 +51,29 @@ void error_at(char *loc, char *fmt, ...) {
 	exit(1);
 }
 
-static bool token_reserved(char* op) {
-    return token->kind != TK_RESERVED || strlen(op) != token->len || memcmp((void*)token->str, (void*)op, token->len);
+static bool token_not_reserved(OpName op) {
+    return token->kind != TK_RESERVED || op != token->op;
 }
 
-bool consume(char* op) {
-	if (token_reserved(op)) {
+bool consume(OpName op) {
+	if (token_not_reserved(op)) {
 		return false;
 	}
 	token = token->next;
 	return true;
+}
+
+void expect(OpName op) {
+	if (token_not_reserved(op)) {
+        ReservedToken* rt = find_reserved_op(op);
+        if (rt != NULL) {
+            error_at(token->str, "Expected '%s'", rt->str);
+        } else {
+            error_at(token->str, "Expected Unknown");
+        }
+		
+	}
+	token = token->next;
 }
 
 static bool token_not_ident() {
@@ -47,13 +89,6 @@ Token *consume_ident() {
     return ret;
 }
 
-void expect(char* op) {
-	if (token_reserved(op)) {
-		error_at(token->str, "Not '%s'", op);
-	}
-	token = token->next;
-}
-
 int expect_number() {
 	if (token->kind != TK_NUM) {
 		error_at(token->str, "Not a number!");
@@ -67,24 +102,7 @@ bool at_eof() {
 	return token->kind == TK_EOF;
 }
 
-// Make sure to put lengthy strings in first
-static char* reserved_characters[] = {
-    "<=", ">=", "==", "!=", ";", "=", ">", "<", "+", "-", "*", "/", "%", "(", ")"
-};
-
-int reserved(char* c) {
-    int n = sizeof(reserved_characters) / sizeof(char*);
-    for (int i = 0; i < n; i++) {
-        char* target = reserved_characters[i];
-        int len = strlen(target);
-        if (strncmp(c, target, len) == 0) {
-            return len;
-        }
-    }
-    return 0;
-}
-
-int ident(char* c) {
+static int ident(char* c) {
 	if (!isalpha(c[0])) {
 		return 0;
 	}
@@ -121,11 +139,12 @@ Token *tokenize(char *p) {
 			continue;
 		}
 		
-        int reserved_len = reserved(p);
-		if (reserved_len > 0) {
+        ReservedToken *reserved = find_reserved_str(p);
+		if (reserved != NULL) {
 			cur = new_token(TK_RESERVED, cur, p);
-            cur->len = reserved_len;
-            p += reserved_len;
+            cur->len = reserved->len;
+            cur->op = reserved->op;
+            p += reserved->len;
 			continue;
 		}
 

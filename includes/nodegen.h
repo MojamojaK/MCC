@@ -28,7 +28,7 @@ struct Node {
 
 Node *new_node(const NodeKind kind, Node *lhs, Node *rhs);
 Node *new_node_num(const int val);
-Node *new_node_lvar(const char* name, const int len);
+Node *new_node_lvar(Token *token, const char* name, const int len);
 
 void program();
 Node *stmt();

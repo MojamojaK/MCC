@@ -13,7 +13,7 @@ void generate_stack_header(char* name) {
     printf("%s:\n", name);
     printf("\tpush\trbp\n");
     printf("\tmov\trbp,\trsp\n");
-    printf("\tsub\trsp,\t208\n");
+    printf("\tsub\trsp,\t%d\n", lvar_count() << 3);
 }
 
 void generate_stack_footer() {

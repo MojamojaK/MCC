@@ -16,7 +16,6 @@ assert(){
     fi
     ./tmp
     actual="$?"
-    
 
     if [ "$actual" = "$expected" ]; then
         echo "$input => $actual"
@@ -65,3 +64,9 @@ assert 255 "a = 255;"
 assert 12 "a = 12;a;"
 assert 23 "a = 12; b = 11; a + b;"
 assert 33 "a = 2; d = 3; v = 5; m = d * 11; (a + d == v) * m;"
+
+assert 255 "IMMULTI_BYTE = 255;"
+assert 12 "IMMULTI_BYTE = 12;IMMULTI_BYTE;"
+assert 23 "IMMULTI_BYTE = 12; b = 11; IMMULTI_BYTE + b;"
+assert 33 "IMMULTI_BYTE = 2; d = 3; v = 5; m = d * 11; (IMMULTI_BYTE + d == v) * m;"
+
