@@ -3,7 +3,7 @@ INCLUDEDIR = includes
 BUILDDIR = build
 
 CC = cc
-CFLAGS = -std=c11 -g -static -I$(INCLUDEDIR)
+CFLAGS = -std=c11 -g -static -I$(INCLUDEDIR) -Wall
 
 BIN=main
 SRCS=$(wildcard $(SOURCEDIR)/*.c)
