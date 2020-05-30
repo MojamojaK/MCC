@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "error.h"
 #include "tokenizer.h"
 
 static Token *token;
@@ -36,31 +37,17 @@ LVar *find_or_gen_lvar(Token *token) {
     return lvar;
 }
 
-static char* user_input;
-void error_at(char *loc, char *fmt, ...) {
-    // fprintf(stderr, "error_at\n");
-	va_list ap;
-	va_start(ap, fmt);
-
-	int pos = loc - user_input;
-	fprintf(stderr, "%s\n", user_input);
-	fprintf(stderr, "%*s", pos, "");
-	fprintf(stderr, "^ ");
-	vfprintf(stderr, fmt, ap);
-	fprintf(stderr, "\n");
-	exit(1);
-}
-
 static bool token_not_reserved(OpName op) {
     return token->kind != TK_RESERVED || op != token->op;
 }
 
-bool consume(OpName op) {
+Token *consume(OpName op) {
 	if (token_not_reserved(op)) {
-		return false;
+		return NULL;
 	}
+	Token *ret = token;
 	token = token->next;
-	return true;
+	return ret;
 }
 
 void expect(OpName op) {
@@ -89,13 +76,13 @@ Token *consume_ident() {
     return ret;
 }
 
-int expect_number() {
+Token *expect_number() {
 	if (token->kind != TK_NUM) {
 		error_at(token->str, "Not a number!");
 	}
-	int val = token->val;
+	Token *ret = token;
 	token = token->next;
-	return val;
+	return ret;
 }
 
 bool at_eof() {
@@ -127,7 +114,7 @@ static Token *new_token(const TokenKind kind, Token *cur, char *str) {
 }
 
 Token *tokenize(char *p) {
-	user_input = p;
+	error_set_user_input(p);
 
 	Token head;
 	head.next = NULL;
@@ -167,4 +154,6 @@ Token *tokenize(char *p) {
 
 	new_token(TK_EOF, cur, p);
 	token = head.next;
+
+	return token;
 }

@@ -40,10 +40,10 @@ void error_at(char *loc, char *fmt, ...);
 
 Token *tokenize(char *p);
 
-bool consume(OpName op);
+Token *consume(OpName op);
 Token *consume_ident();
 void expect(OpName op);
-int expect_number();
+Token *expect_number();
 bool at_eof();
 
 #endif

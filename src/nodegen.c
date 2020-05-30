@@ -2,32 +2,42 @@
 #include <stdbool.h>
 
 #include "opnames.h"
-#include "tokenizer.h"
 #include "nodegen.h"
 
 int codes = 0;
 Node **code;
 
-Node *new_node(const NodeKind kind, Node *lhs, Node *rhs) {
+Node *new_node(const NodeKind kind, Node *lhs, Node *rhs, Token *token) {
     Node* node = calloc(1, sizeof(Node));
     node->kind = kind;
     node->lhs = lhs;
     node->rhs = rhs;
+    node->token = token;
     return node;
 }
 
-Node *new_node_num(const int val) {
+Node *new_node_virtual_num(int val, Token *token) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = ND_NUM;
     node->val = val;
+    node->token = token;
     return node;
 }
 
-Node *new_node_lvar(Token *token, const char* name, const int len) {
+Node *new_node_num(Token *token) {
+    Node *node = calloc(1, sizeof(Node));
+    node->kind = ND_NUM;
+    node->val = token->val;
+    node->token = token;
+    return node;
+}
+
+Node *new_node_lvar(Token *token) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = ND_LVAR;
     LVar *lvar = find_or_gen_lvar(token);
     node->offset = lvar->offset;
+    node->token = token;
     return node;
 }
 
@@ -51,8 +61,9 @@ Node *expr() {
 
 Node *assign() {
     Node* node = equality();
-    if (consume(OP_ASSIGN)) {
-        node = new_node(ND_ASSIGN, node, assign());
+    Token *token = consume(OP_ASSIGN);
+    if (token != NULL) {
+        node = new_node(ND_ASSIGN, node, assign(), token);
     }
     return node;
 }
@@ -60,79 +71,110 @@ Node *assign() {
 Node *equality() {
     Node *node = relational();
     for (;;) {
-        if (consume(OP_EQ)) {
-            node = new_node(ND_EQ, node, relational());
-        } else if (consume(OP_NEQ)) {
-            node = new_node(ND_NEQ, node, relational());
-        } else {
-            return node;
-        }    
+        Token *eq_token = consume(OP_EQ);
+        if (eq_token != NULL) {
+            node = new_node(ND_EQ, node, relational(), eq_token);
+            continue;
+        }
+        Token *neq_token = consume(OP_NEQ);
+        if (neq_token != NULL) {
+            node = new_node(ND_NEQ, node, relational(), neq_token);
+            continue;
+        }
+        return node;
     }
 }
 
 Node *relational() {
     Node *node = add();
     for (;;) {
-        if (consume(OP_LEQ)) {
-            node = new_node(ND_LEQ, node, add());
-        } else if (consume(OP_GEQ)) {
-            node = new_node(ND_LEQ, add(), node);
-        } else if (consume(OP_LT)) {
-            node = new_node(ND_LT, node, add());
-        } else if (consume(OP_GT)) {
-            node = new_node(ND_LT, add(), node);
-        } else {
-            return node;
+        Token *leq_token = consume(OP_LEQ);
+        if (leq_token != NULL) {
+            node = new_node(ND_LEQ, node, add(), leq_token);
+            continue;
         }
+        Token *geq_token = consume(OP_GEQ);
+        if (geq_token != NULL) {
+            node = new_node(ND_LEQ, add(), node, geq_token);
+            continue;
+        }
+        Token *lt_token = consume(OP_LT);
+        if (lt_token != NULL) {
+            node = new_node(ND_LT, node, add(), lt_token);
+            continue;
+        }
+        Token *gt_token = consume(OP_GT);
+        if (gt_token != NULL) {
+            node = new_node(ND_LT, add(), node, gt_token);
+            continue;
+        }
+        return node;
     }
 }
 
 Node *add() {
     Node *node = mul();
     for (;;) {
-        if (consume(OP_ADD)) {
-            node = new_node(ND_ADD, node, mul());
-        } else if (consume(OP_SUB)) {
-            node = new_node(ND_SUB, node, mul());
-        } else {
-            return node;
+        Token *add_token = consume(OP_ADD);
+        if (add_token != NULL) {
+            node = new_node(ND_ADD, node, mul(), add_token);
+            continue;
         }
+        Token *sub_token = consume(OP_SUB);
+        if (sub_token != NULL) {
+            node = new_node(ND_SUB, node, mul(), sub_token);
+            continue;
+        }
+        return node;
     }
 }
 
 Node *mul() {
     Node *node = unary();
     for (;;) {
-        if (consume(OP_MUL)) {
-            node = new_node(ND_MUL, node, unary());
-        } else if (consume(OP_DIV)) {
-            node = new_node(ND_DIV, node, unary());
-        } else if (consume(OP_MOD)) {
-            node = new_node(ND_MOD, node, unary());
-        } else {
-            return node;
+        Token *mul_token = consume(OP_MUL);
+        if (mul_token != NULL) {
+            node = new_node(ND_MUL, node, unary(), mul_token);
+            continue;
         }
+
+        Token *div_token = consume(OP_DIV);
+        if (div_token != NULL) {
+            node = new_node(ND_DIV, node, unary(), div_token);
+            continue;
+        }
+
+        Token *mod_token = consume(OP_MOD);
+        if (mod_token != NULL) {
+            node = new_node(ND_MOD, node, unary(), mod_token);
+            continue;
+        }
+        return node;
     }
 }
 
 Node *unary() {
-    if (consume(OP_ADD)) {
+    Token *pos_token = consume(OP_ADD);
+    if (pos_token != NULL) {
         return primary();
-    } else if (consume(OP_SUB)) {
-        return new_node(ND_SUB, new_node_num(0), primary());
+    }
+    Token *neg_token = consume(OP_SUB);
+    if (neg_token != NULL) {
+        return new_node(ND_SUB, new_node_virtual_num(0, neg_token), primary(), neg_token);
     }
     return primary();
 }
 
 Node *primary() {
-    if (consume(OP_BR_OPEN)) {
+    if (consume(OP_BR_OPEN) != NULL) {
         Node *node = expr();
         expect(OP_BR_CLOSE);
         return node;
     }
     Token *ident = consume_ident();
     if (ident != NULL) {
-        return new_node_lvar(ident, ident->str, ident->len);
+        return new_node_lvar(ident);
     }
-    return new_node_num(expect_number());
+    Token* number_token = expect_number();
+    return new_node_num(number_token);
 }

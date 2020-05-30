@@ -1,6 +1,8 @@
 #ifndef _NODEGEN
 #define _NODEGEN
 
+#include "tokenizer.h"
+
 typedef enum {
     ND_ADD,
     ND_SUB,
@@ -24,11 +26,13 @@ struct Node {
     Node *rhs;
     int val;
     int offset;
+    Token *token;
 };
 
-Node *new_node(const NodeKind kind, Node *lhs, Node *rhs);
-Node *new_node_num(const int val);
-Node *new_node_lvar(Token *token, const char* name, const int len);
+Node *new_node(const NodeKind kind, Node *lhs, Node *rhs, Token *token);
+Node *new_node_virtual_num(int val, Token *token);
+Node *new_node_num(Token *token);
+Node *new_node_lvar(Token *token);
 
 void program();
 Node *stmt();

@@ -1,6 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-
+#include "error.h"
 #include "asmgen.h"
 #include "tokenizer.h"
 #include "codegen.h"
@@ -27,8 +25,7 @@ void generate_stack_footer() {
 
 static void gen_lval(Node* node) {
     if (node->kind != ND_LVAR) {
-        fprintf(stderr, "LHS not variable\n");
-        exit(1);
+        error_at(node->token->str, "LHS not variable");
     }
     out_3("mov", "rax", "rbp");
     out_3("sub", "rax", format(buffer, "%d", node->offset));
@@ -54,6 +51,8 @@ static void gen(Node *node) {
             out_3("mov", "[rax]", "rdi");
             out_2("push", "rdi");
             return;
+        default:
+            break;
     }
 
     gen(node->lhs);
@@ -99,6 +98,8 @@ static void gen(Node *node) {
             out_3("cmp", "rax", "rdi");
             out_2("setl", "al");
             out_3("movzb", "rax", "al");
+            break;
+        default:
             break;
     }
 
