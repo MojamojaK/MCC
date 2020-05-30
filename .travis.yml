@@ -1,0 +1,10 @@
+language: c
+os:
+- linux
+dist: bionic
+arch: amd64
+compiler: cc
+before_install:
+- chmod +x test.sh
+script: 
+- make && make test
